@@ -5,5 +5,5 @@
 struct Produto {
     int codigo;
     char descricao[TAM_DESCRICAO];
-    double valorunit
+    double valorunit;
 }
