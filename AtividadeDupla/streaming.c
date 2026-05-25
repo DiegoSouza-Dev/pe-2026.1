@@ -11,7 +11,7 @@
 #define MAX_USUARIOS 100
 #define MAX_VIDEOS_CADASTRADOS 100
 
-// ============= ESTRUTURAS =============
+
 struct Video {
     int id;
     char titulo[TAM_MAX_TITULO];
@@ -27,19 +27,18 @@ struct Usuario {
     int qtdVideosFavoritos;
 };
 
-// ============= VARIÁVEIS GLOBAIS =============
+// variaveis
 char nomeArqVideos[] = "videosCadastrados.bin";
 char nomeArqUsuarios[] = "usuariosCadastrados.bin";
 
-// ============= PROTÓTIPOS DE FUNÇÕES =============
-// Funções de Vídeo
+// void/funçao de video
 void cadastrarVideo();
 void listarTodosVideos();
 void buscarVideoPorId(int id, struct Video *v);
 void atualizarVideo();
 void deletarVideo();
 
-// Funções de Usuário
+// void/funçao de usuario
 void cadastrarUsuario();
 void listarTodosUsuarios();
 int buscarUsuarioPorEmail(char email[]);
@@ -48,10 +47,10 @@ void atualizarUsuario();
 void deletarUsuario();
 void adicionarVideoFavorito();
 
-// Funções de Relatório
+// void do relatorio
 void relatorioUsuariosComFavoritos();
 
-// Funções auxiliares
+// funçoes auxiliares
 int obterProximoIdVideo();
 int obterProximoIdUsuario();
 void limparBuffer();
