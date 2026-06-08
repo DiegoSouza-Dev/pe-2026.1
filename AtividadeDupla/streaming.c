@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
 
 #define TAM_MAX_TEMA 20
 #define TAM_MAX_TITULO 50
@@ -11,674 +10,716 @@
 #define MAX_USUARIOS 100
 #define MAX_VIDEOS_CADASTRADOS 100
 
-
-struct Video {
+struct Video{
     int id;
     char titulo[TAM_MAX_TITULO];
     char tema[TAM_MAX_TEMA];
     char descricao[TAM_MAX_DESCRICAO];
 };
 
-struct Usuario {
+struct Usuario{
     int id;
     char nome[TAM_MAX_NOME];
     char email[TAM_MAX_EMAIL];
     int idsVideosFavoritos[QTD_MAX_VIDEOS];
-    int qtdVideosFavoritos;
+    int qtd_favoritos;
 };
 
-// variaveis
-char nomeArqVideos[] = "videosCadastrados.bin";
-char nomeArqUsuarios[] = "usuariosCadastrados.bin";
+int buscarUsuarioEmail(char nomeArqUsuarios[], char email[]); 
+int buscarUsuarioId(char nomeArqUsuarios[], int id);
+void mostrarVideosFavoritos(struct Video vv[], int tam);
+void cadastrarUsuario(char nomeArqUsuarios[]);
+void cadastrarVideo(char nomeArqVideos[]);
+void mostrarVideos(char nomeArqVideos[]);
+void lerStr(char str[], int tamMax);
+int buscarVideo(char nomeArqVideos[], int id);
+void mostrarUsuarios(char nomeArqUsuarios[]);
+int qtdUsuariosCadastrados(char nomeArqUsuarios[]);
+int qtdVideosCadastrados(char nomeArqVideos[]); // CORRIGIDO: mudado de char para char[]
+void adicionarVideoAosFavoritos(char nomeArqVideos[], char nomeArqUsuarios[]);
+void atualizarUsuario(char nomeArqUsuarios[]);
+void atualizarVideo(char nomeArqVideos[]); // CORRIGIDO: mudado de char para char[]
+void relatorio(char nomeArqVideos[], char nomeArqUsuarios[]);
+void excluirUsuario(char nomeArquivoUsuarios[]);
+void excluirVideo(char nomeArqVideos[]);
+void verUmVideo(char nomeArqVideos[]);
+void verUmUsuario(char nomeArqUsuarios[], char nomeArqVideos[]);
 
-// void/funçao de video
-void cadastrarVideo();
-void listarTodosVideos();
-void buscarVideoPorId(int id, struct Video *v);
-void atualizarVideo();
-void deletarVideo();
+int main(){
+    char nomeArqVideos[] = "videosCadastrados.bin";
+    char nomeArqUsuarios[] = "usuariosCadastrados.bin";
 
-// void/funçao de usuario
-void cadastrarUsuario();
-void listarTodosUsuarios();
-int buscarUsuarioPorEmail(char email[]);
-int buscarUsuarioPorId(int id, struct Usuario *u);
-void atualizarUsuario();
-void deletarUsuario();
-void adicionarVideoFavorito();
+    int opcao = 1;
 
-// void do relatorio
-void relatorioUsuariosComFavoritos();
+    while(opcao != 0){
+        printf("Ola Bem vindo ao seu Streaming de videos. Escolha uma das opcoes abaixo: ");
+        printf("\n[1] Cadastrar novo usuario");
+        printf("\n[2] Cadastrar novo video");
+        printf("\n[3] Ver todos os videos cadastrados");
+        printf("\n[4] Vizualizar todos os usuarios cadastrados");
+        printf("\n[5] Adicionar video aos favoritos");
+        printf("\n[6] Atualizar usuario");
+        printf("\n[7] Atualizar video");
+        printf("\n[8] Relatorio");
+        printf("\n[9] Excluir Usuario");
+        printf("\n[10] Excluir Video");
+        printf("\n[11] Ver um video especifico");
+        printf("\n[12] Ver um usuario especifico");
+        printf("\n[0] Fechar programa\n");
+        scanf("%d", &opcao);
 
-// funçoes auxiliares
-int obterProximoIdVideo();
-int obterProximoIdUsuario();
-void limparBuffer();
-
-//implementaçoes 
-
-// limpa o buffer da entrada
-void limparBuffer() {
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF);
+        switch(opcao){
+            case 1:
+                cadastrarUsuario(nomeArqUsuarios);
+                break;
+            case 2:
+                cadastrarVideo(nomeArqVideos);
+                break;
+            case 3:
+                mostrarVideos(nomeArqVideos);
+                break;
+            case 4:
+                mostrarUsuarios(nomeArqUsuarios);
+                break;
+            case 5:
+                adicionarVideoAosFavoritos(nomeArqVideos, nomeArqUsuarios);
+                break;
+            case 6:
+                atualizarUsuario(nomeArqUsuarios);
+                break;
+            case 7:
+                atualizarVideo(nomeArqVideos);
+                break;
+            case 8:
+                relatorio(nomeArqVideos, nomeArqUsuarios);
+                break;
+            case 9:
+                excluirUsuario(nomeArqUsuarios);
+                break;
+            case 10:
+                excluirVideo(nomeArqVideos);
+                break;
+            case 11:
+                verUmVideo(nomeArqVideos);
+                break;
+            case 12:
+                verUmUsuario(nomeArqUsuarios, nomeArqVideos);
+                break;
+        }    
+    }
+    return 0;
 }
 
-// obtem o prox ID disponivel para video
-int obterProximoIdVideo() {
-    FILE *arq = fopen(nomeArqVideos, "rb");
-    int maxId = 0;
-    struct Video v;
-
-    if (arq != NULL) {
-        while (fread(&v, sizeof(struct Video), 1, arq) == 1) {
-            if (v.id > maxId) {
-                maxId = v.id;
-            }
-        }
-        fclose(arq);
-    }
-    return maxId + 1;
-}
-
-// obtem o prox ID disponivel para o usuario 
-int obterProximoIdUsuario() {
-    FILE *arq = fopen(nomeArqUsuarios, "rb");
-    int maxId = 0;
-    struct Usuario u;
-
-    if (arq != NULL) {
-        while (fread(&u, sizeof(struct Usuario), 1, arq) == 1) {
-            if (u.id > maxId) {
-                maxId = u.id;
-            }
-        }
-        fclose(arq);
-    }
-    return maxId + 1;
-}
-
-// funçoes de video
-
-void cadastrarVideo() {
-    struct Video novo;
-    FILE *arq = fopen(nomeArqVideos, "a+b");
-
-    if (arq == NULL) {
-        printf("Erro ao abrir arquivo de vídeos!\n");
-        return;
-    }
-
-    novo.id = obterProximoIdVideo();
-
-    printf("\n--- CADASTRO DE NOVO VÍDEO ---\n");
-    printf("Titulo: ");
-    limparBuffer();
-    fgets(novo.titulo, (int)sizeof(novo.titulo), stdin);
-    novo.titulo[strcspn(novo.titulo, "\n")] = 0;
-
-    printf("Tema: ");
-    fgets(novo.tema, (int)sizeof(novo.tema), stdin);
-    novo.tema[strcspn(novo.tema, "\n")] = 0;
-
-    printf("Descricao: ");
-    fgets(novo.descricao, (int)sizeof(novo.descricao), stdin);
-    novo.descricao[strcspn(novo.descricao, "\n")] = 0;
-
-    if (fwrite(&novo, sizeof(struct Video), 1, arq) == 1) {
-        printf("\nVideo cadastrado com sucesso! ID: %d\n", novo.id);
-    } else {
-        printf("\nErro ao cadastrar video!\n");
-    }
-
-    fclose(arq);
-}
-
-void listarTodosVideos() {
-    FILE *arq = fopen(nomeArqVideos, "rb");
-    struct Video v;
-    int contador = 0;
-
-    if (arq == NULL) {
-        printf("\nNenhum video cadastrado ainda!\n");
-        return;
-    }
-
-    printf("\n--- LISTA DE TODOS OS VIDEOS ---\n");
-    printf("-------------------------------------------------\n");
-
-    while (fread(&v, sizeof(struct Video), 1, arq) == 1) {
-        printf("ID: %d\n", v.id);
-        printf("Titulo: %s\n", v.titulo);
-        printf("Tema: %s\n", v.tema);
-        printf("Descricao: %s\n", v.descricao);
-        printf("-------------------------------------------------------------\n");
-        contador++;
-    }
-
-    if (contador == 0) {
-        printf("Nenhum video cadastrado.\n");
-    } else {
-        printf("Total de videos: %d\n", contador);
-    }
-
-    fclose(arq);
-}
-
-void buscarVideoPorId(int id, struct Video *v) {
-    FILE *arq = fopen(nomeArqVideos, "rb");
-    struct Video temp;
-
-    if (arq == NULL) {
-        v->id = -1;
-        return;
-    }
-
-    while (fread(&temp, sizeof(struct Video), 1, arq) == 1) {
-        if (temp.id == id) {
-            *v = temp;
-            fclose(arq);
-            return;
-        }
-    }
-
-    v->id = -1;
-    fclose(arq);
-}
-
-void atualizarVideo() {
-    int id;
-    struct Video v;
-
-    printf("\n--- ATUALIZAR VIDEO ---\n");
-    printf("Digite o ID do video: ");
-    scanf("%d", &id);
-
-    buscarVideoPorId(id, &v);
-
-    if (v.id == -1) {
-        printf("Video nso encontrado!\n");
-        return;
-    }
-
-    printf("\nVideo encontrado: %s\n", v.titulo);
-    printf("Novo titulo (ou pressione Enter para manter): ");
-    limparBuffer();
-
-    char temp[TAM_MAX_TITULO];
-    if (fgets(temp, (int)sizeof(temp), stdin) != NULL && temp[0] != '\n') {
-        temp[strcspn(temp, "\n")] = 0;
-        strcpy(v.titulo, temp);
-    }
-
-    printf("Novo tema (ou pressione Enter para manter): ");
-    if (fgets(temp, (int)sizeof(temp), stdin) != NULL && temp[0] != '\n') {
-        temp[strcspn(temp, "\n")] = 0;
-        strcpy(v.tema, temp);
-    }
-
-    printf("Nova descricao (ou pressione Enter para manter): ");
-    char tempDesc[TAM_MAX_DESCRICAO];
-    if (fgets(tempDesc, (int)sizeof(tempDesc), stdin) != NULL && tempDesc[0] != '\n') {
-        tempDesc[strcspn(tempDesc, "\n")] = 0;
-        strcpy(v.descricao, tempDesc);
-    }
-
-    // reescrever ou editar o arquivo
-    FILE *arq = fopen(nomeArqVideos, "r+b");
-    if (arq == NULL) {
-        printf("Erro ao abrir arquivo!\n");
-        return;
-    }
-
-    struct Video v_temp;
-    while (fread(&v_temp, sizeof(struct Video), 1, arq) == 1) {
-        if (v_temp.id == id) {
-            fseek(arq, -(long)sizeof(struct Video), SEEK_CUR);
-            fwrite(&v, sizeof(struct Video), 1, arq);
-            printf("Video atualizado com sucesso!\n");
-            fclose(arq);
-            return;
-        }
-    }
-
-    fclose(arq);
-}
-
-void deletarVideo() {
-    int id;
-    printf("\n--- DELETAR VIDEO ---\n");
-    printf("Digite o ID do video a deletar: ");
-    scanf("%d", &id);
-
-    FILE *arqOriginal = fopen(nomeArqVideos, "rb");
-    FILE *arqTemp = fopen("temp_videos.bin", "wb");
-
-    if (arqOriginal == NULL || arqTemp == NULL) {
-        printf("Erro ao abrir arquivos!\n");
-        return;
-    }
-
-    struct Video v;
-    int encontrado = 0;
-
-    while (fread(&v, sizeof(struct Video), 1, arqOriginal) == 1) {
-        if (v.id != id) {
-            fwrite(&v, sizeof(struct Video), 1, arqTemp);
-        } else {
-            encontrado = 1;
-        }
-    }
-
-    fclose(arqOriginal);
-    fclose(arqTemp);
-
-    if (encontrado) {
-        remove(nomeArqVideos);
-        rename("temp_videos.bin", nomeArqVideos);
-        printf("Video deletado com sucesso!\n");
-    } else {
-        remove("temp_videos.bin");
-        printf("Video não encontrado!\n");
+void lerStr(char str[], int tamMax) {
+    fgets(str, tamMax, stdin);
+    int tam = strlen(str);
+    if (tam > 0 && str[tam - 1] == '\n') {
+        str[tam - 1] = '\0';
     }
 }
 
-// funçoes do usuario -----------
-
-void cadastrarUsuario() {
+void cadastrarUsuario(char nomeArqUsuarios[]){
     struct Usuario novo;
-    FILE *arq = fopen(nomeArqUsuarios, "a+b");
+    char email[TAM_MAX_EMAIL];
+    int resultadoBusca, id;
 
-    if (arq == NULL) {
-        printf("Erro ao abrir arquivo de usuarios!\n");
+    if(qtdUsuariosCadastrados(nomeArqUsuarios) == MAX_USUARIOS){
+        printf("Limite de usuarios cadastrados %d atingido.\n", MAX_USUARIOS);
         return;
     }
 
-    printf("\n--- CADASTRO DE NOVO USUARIO ---\n");
-    printf("Email: ");
-    limparBuffer();
-    fgets(novo.email, (int)sizeof(novo.email), stdin);
-    novo.email[strcspn(novo.email, "\n")] = 0;
+    printf("Digite o id do novo usuario: ");
+    scanf("%d", &id);
+    getchar();
+    resultadoBusca = buscarUsuarioId(nomeArqUsuarios, id);
+    if(resultadoBusca != -1){
+        printf("Id ja cadastrado.\n");
+        return;
+    }
+    novo.id = id;
 
-    // Verifica se email já existe
-    if (buscarUsuarioPorEmail(novo.email) != -1) {
-        printf("Email ja cadastrado!\n");
-        fclose(arq);
+    printf("\nDigite o email do usuario: ");
+    lerStr(email, TAM_MAX_EMAIL);
+    resultadoBusca = buscarUsuarioEmail(nomeArqUsuarios, email);
+    if(resultadoBusca != -1){
+        printf("Email ja cadastrado.\n");
+        return;
+    }
+    strcpy(novo.email, email);
+
+    printf("Digite o nome de usuario: ");
+    lerStr(novo.nome, TAM_MAX_NOME);
+
+    novo.qtd_favoritos = 0;
+
+    FILE * arq = fopen(nomeArqUsuarios, "ab");
+    if(arq == NULL){
+        printf("Erro ao abrir arquivo.\n");
         return;
     }
 
-    printf("Nome: ");
-    fgets(novo.nome, (int)sizeof(novo.nome), stdin);
-    novo.nome[strcspn(novo.nome, "\n")] = 0;
-
-    novo.id = obterProximoIdUsuario();
-    novo.qtdVideosFavoritos = 0;
-    for (int i = 0; i < QTD_MAX_VIDEOS; i++) {
-        novo.idsVideosFavoritos[i] = -1;
-    }
-
-    if (fwrite(&novo, sizeof(struct Usuario), 1, arq) == 1) {
-        printf("\n Usuario cadastrado com sucesso! ID: %d\n", novo.id);
-    } else {
-        printf("\n Erro ao cadastrar usuario!\n");
-    }
+    fwrite(&novo, sizeof(struct Usuario), 1, arq);
 
     fclose(arq);
+
+    printf("\nUsuario %s cadastrado com sucesso!\n", novo.nome);
 }
 
-void listarTodosUsuarios() {
-    FILE *arq = fopen(nomeArqUsuarios, "rb");
-    struct Usuario u;
-    int contador = 0;
-
-    if (arq == NULL) {
-        printf("\n Nenhum usuario cadastrado ainda!\n");
-        return;
-    }
-
-    printf("\n--- LISTA DE TODOS OS USUARIOS ---\n");
-    printf("---------------------------------------------------\n");
-
-    while (fread(&u, sizeof(struct Usuario), 1, arq) == 1) {
-        printf("ID: %d\n", u.id);
-        printf("Nome: %s\n", u.nome);
-        printf("Email: %s\n", u.email);
-        printf("Quantidade de videos favoritos: %d\n", u.qtdVideosFavoritos);
-        printf("---------------------------------------------\n");
-        contador++;
-    }
-
-    if (contador == 0) {
-        printf("Nenhum usuario cadastrado.\n");
-    } else {
-        printf("Total de usuarios: %d\n", contador);
-    }
-
-    fclose(arq);
-}
-
-int buscarUsuarioPorEmail(char email[]) {
-    FILE *arq = fopen(nomeArqUsuarios, "rb");
+int buscarUsuarioEmail(char nomeArqUsuarios[], char email[]){
+    FILE * arq = fopen(nomeArqUsuarios, "rb");
     int i = 0;
 
     if (arq == NULL) {
-        return -1;
+        printf("Erro ao abrir arquivo de usuarios.\n");
+        return -1; 
     }
 
     struct Usuario u;
-    while (fread(&u, sizeof(struct Usuario), 1, arq) == 1) {
-        if (strcmp(u.email, email) == 0) {
+
+    while(fread(&u, sizeof(struct Usuario), 1, arq) == 1){
+        if(strcmp(u.email, email) == 0){
             fclose(arq);
             return i;
         }
-        i++;
+        i+=1;
     }
-
-    fclose(arq);
-    return - 1;
-}
-
-int buscarUsuarioPorId(int id, struct Usuario *u) {
-    FILE *arq = fopen(nomeArqUsuarios, "rb");
-    struct Usuario temp;
-
-    if (arq == NULL) {
-        return - 1;
-    }
-
-    while (fread(&temp, sizeof(struct Usuario), 1, arq) == 1) {
-        if (temp.id == id) {
-            *u = temp;
-            fclose(arq);
-            return 0;
-        }
-    }
-
     fclose(arq);
     return -1;
 }
 
-void adicionarVideoFavorito() {
-    char email[TAM_MAX_EMAIL];
-    int idVideo;
+int buscarUsuarioId(char nomeArqUsuarios[], int id){
+    FILE * arq = fopen(nomeArqUsuarios, "rb");
+    int i = 0;
+
+    if (arq == NULL) {
+        printf("Erro ao abrir arquivo de usuarios.\n");
+        return -1; 
+    }
+
     struct Usuario u;
 
-    printf("\n--- ADICIONAR VIDEO AOS FAVORITOS ---\n");
-    printf("Email do usuario: ");
-    limparBuffer();
-    fgets(email, (int)sizeof(email), stdin);
-    email[strcspn(email, "\n")] = 0;
+    while(fread(&u, sizeof(struct Usuario), 1, arq) == 1){
+        if(u.id == id){
+            fclose(arq);
+            return i;
+        }
+        i+=1;
+    }
+    fclose(arq);
+    return -1;
+}
 
-    if (buscarUsuarioPorId(buscarUsuarioPorEmail(email), &u) != 0) {
-        printf("Usuário nao encontrado!\n");
+void cadastrarVideo(char nomeArqVideos[]){
+    struct Video novo;
+    int id, resultadoBusca;
+
+    if(qtdVideosCadastrados(nomeArqVideos) == MAX_VIDEOS_CADASTRADOS){
+        printf("Limite de videos cadastrados atingido (%d)\n", MAX_VIDEOS_CADASTRADOS);
         return;
     }
 
-    printf("ID do video a adicionar: ");
+    printf("Digite o id do video: ");
+    scanf("%d", &id);
+    getchar();
+
+    resultadoBusca = buscarVideo(nomeArqVideos, id);
+    if(resultadoBusca != -1){
+        printf("Id ja cadastrado.\n");
+        return;
+    }
+
+    novo.id = id;
+    printf("Digite o titulo do video: ");
+    lerStr(novo.titulo, TAM_MAX_TITULO);
+    printf("Digite a descricao do video: ");
+    lerStr(novo.descricao, TAM_MAX_DESCRICAO);
+    printf("Digite o tema do video: ");
+    lerStr(novo.tema, TAM_MAX_TEMA);
+
+    FILE * arq = fopen(nomeArqVideos, "ab");
+
+    if(arq == NULL){
+        printf("Erro ao abrir arquivo de videos.\n");
+        return;
+    }
+    fwrite(&novo, sizeof(struct Video), 1, arq);
+    fclose(arq);
+
+    printf("\nVideo cadastrado com sucesso.\n");
+}
+
+int buscarVideo(char nomeArqVideos[], int id){
+    FILE * arq = fopen(nomeArqVideos, "rb");
+    int i = 0;
+
+    if (arq == NULL) {
+        printf("Erro ao abrir arquivo de videos.\n");
+        return -1; 
+    }
+
+    struct Video u;
+
+    while(fread(&u, sizeof(struct Video), 1, arq) == 1){
+        if(u.id == id){
+            fclose(arq);
+            return i;
+        }
+        i+=1;
+    }
+    fclose(arq);
+    return -1;
+}
+
+void mostrarVideos(char nomeArqVideos[]){
+    FILE * arq = fopen(nomeArqVideos, "rb");
+
+    if (arq == NULL) {
+        printf("Erro ao abrir arquivo de videos.\n");
+        return; 
+    }
+
+    struct Video u;
+
+    int contador = 0;
+
+    while(fread(&u, sizeof(struct Video), 1, arq) == 1){
+        printf("\nId: %d\n", u.id);
+        printf("Titulo: %s\n", u.titulo);
+        contador += 1;
+    }
+
+    if(contador == 0){
+        printf("Nenhum video cadastrado.\n");
+    }
+
+    fclose(arq);
+}
+
+void mostrarUsuarios(char nomeArqUsuarios[]){
+    FILE * arq = fopen(nomeArqUsuarios, "rb");
+
+    if(arq == NULL){
+        printf("Erro ao abrir arquivo de usuarios.\n");
+        return;
+    }
+
+    struct Usuario u;
+
+    int contador = 0;
+
+    while(fread(&u, sizeof(struct Usuario), 1, arq) == 1){
+        printf("\nId: %d\n", u.id);
+        printf("Nome: %s\n", u.nome);
+        contador += 1;
+    }
+
+    if(contador == 0){
+        printf("Nenhum usuario cadastrado.\n");
+    }
+
+    fclose(arq);
+}
+
+void adicionarVideoAosFavoritos(char nomeArqVideos[], char nomeArqUsuarios[]){
+    int idUsuario, idVideo, buscaUsuario;
+
+    printf("Digite o ID do usuario que ira adicionar o video: ");
+    scanf("%d", &idUsuario);
+
+    buscaUsuario = buscarUsuarioId(nomeArqUsuarios, idUsuario);
+    if(buscaUsuario == -1){
+        printf("Usuario nao cadastrado.\n");
+        return;
+    }
+
+    printf("Digite o id do video que deseja adicionar aos favoritos: ");
     scanf("%d", &idVideo);
 
-    struct Video v;
-    buscarVideoPorId(idVideo, &v);
-
-    if (v.id == -1) {
-        printf("Video nao encontrado!\n");
+    if(buscarVideo(nomeArqVideos, idVideo) == -1){
+        printf("Video nao cadastrado.\n");
         return;
     }
 
-    // verificar se video ja esta nos favoritos
-    for (int i = 0; i < u.qtdVideosFavoritos; i++) {
-        if (u.idsVideosFavoritos[i] == idVideo) {
-            printf("Este video ja esta nos favoritos!\n");
-            return;
-        }
-    }
+    FILE * arq = fopen(nomeArqUsuarios, "r+b");
 
-    if (u.qtdVideosFavoritos >= QTD_MAX_VIDEOS) {
-        printf("Limite de videos favoritos atingido!\n");
+    if(arq == NULL){
+        printf("Erro ao abrir arquivo de usuarios.\n");
         return;
     }
 
-    u.idsVideosFavoritos[u.qtdVideosFavoritos] = idVideo;
-    u.qtdVideosFavoritos++;
+    struct Usuario u;
 
-    // atualizar usuario no arquivo
-    FILE *arq = fopen(nomeArqUsuarios, "r+b");
-    if (arq == NULL) {
-        printf("Erro ao abrir arquivo!\n");
+    long posicaoBytes = buscaUsuario * sizeof(struct Usuario);
+    fseek(arq, posicaoBytes, SEEK_SET);
+
+    fread(&u, sizeof(struct Usuario), 1, arq);
+
+    if(u.qtd_favoritos == QTD_MAX_VIDEOS){
+        printf("Limite de videos favoritos do usuario atingido.\n");
+        fclose(arq);
         return;
     }
 
-    struct Usuario u_temp;
-    while (fread(&u_temp, sizeof(struct Usuario), 1, arq) == 1) {
-        if (u_temp.id == u.id) {
-            fseek(arq, -(long)sizeof(struct Usuario), SEEK_CUR);
-            fwrite(&u, sizeof(struct Usuario), 1, arq);
-            printf("Video adicionado aos favoritos!\n");
-            fclose(arq);
-            return;
-        }
-    }
+    u.idsVideosFavoritos[u.qtd_favoritos] = idVideo;
+    u.qtd_favoritos += 1;
 
+    fseek(arq, -(long)sizeof(struct Usuario), SEEK_CUR); // CORRIGIDO: Adicionado cast (long)
+    fwrite(&u, sizeof(struct Usuario), 1, arq);
+
+    printf("Video adicionado aos favoritos com sucesso.\n");
     fclose(arq);
 }
 
-void atualizarUsuario() {
-    char email[TAM_MAX_EMAIL];
-    struct Usuario u;
+int qtdUsuariosCadastrados(char nomeArqUsuarios[]){
+    FILE * arq = fopen(nomeArqUsuarios, "rb");
 
-    printf("\n--- ATUALIZAR USUARIO ---\n");
-    printf("Email do usuario: ");
-    limparBuffer();
-    fgets(email, (int)sizeof(email), stdin);
-    email[strcspn(email, "\n")] = 0;
-
-    int posicao = buscarUsuarioPorEmail(email);
-    if (posicao == -1) {
-        printf("✗ Usuario nao encontrado!\n");
-        return;
+    if(arq == NULL){
+        return 0;
     }
 
-    buscarUsuarioPorId(posicao + 1, &u); // aproximação para encontrar o usuário
+    fseek(arq, 0, SEEK_END);
+    long tamanhoBytes = ftell(arq);
 
-    // lendo arquivo pra encontrar o usuario correto
-    FILE *arq = fopen(nomeArqUsuarios, "rb");
-    if (arq == NULL) {
-        printf("Erro ao abrir arquivo!\n");
-        return;
-    }
-
-    struct Usuario u_temp;
-    int encontrado = 0;
-    while (fread(&u_temp, sizeof(struct Usuario), 1, arq) == 1) {
-        if (strcmp(u_temp.email, email) == 0) {
-            u = u_temp;
-            encontrado = 1;
-            break;
-        }
-    }
     fclose(arq);
 
-    if (!encontrado) {
-        printf("Usuario nao encontrado!\n");
+    return tamanhoBytes / sizeof(struct Usuario);
+}
+
+int qtdVideosCadastrados(char nomeArqVideos[]){ // CORRIGIDO: mudado de char para char[]
+    FILE * arq = fopen(nomeArqVideos, "rb");
+
+    if(arq == NULL){
+        return 0;
+    }
+
+    fseek(arq, 0, SEEK_END);
+    long tamanhoBytes = ftell(arq);
+
+    fclose(arq);
+
+    return tamanhoBytes / sizeof(struct Video);
+}
+
+void atualizarUsuario(char nomeArqUsuarios[]){
+    int idUsuario, buscaUsuario;
+
+    printf("Digite o id do usuario que deseja atualizar: ");
+    scanf("%d", &idUsuario);
+    getchar();
+
+    buscaUsuario = buscarUsuarioId(nomeArqUsuarios, idUsuario);
+
+    if(buscaUsuario == -1){
+        printf("Usuario nao cadastrado.\n");
         return;
     }
 
-    printf("\nUsuario encontrado: %s\n", u.nome);
-    printf("Novo nome (ou pressione Enter para manter): ");
+    FILE * arq = fopen(nomeArqUsuarios, "r+b");
+
+    if(arq == NULL){
+        printf("Erro ao abrir arquivo de usuarios.\n");
+        return;
+    }
+
+    struct Usuario u;
+
+    long posicaoBytes = buscaUsuario * sizeof(struct Usuario);
+    fseek(arq, posicaoBytes, SEEK_SET);
+    fread(&u, sizeof(struct Usuario), 1, arq);
 
     char temp[TAM_MAX_NOME];
-    if (fgets(temp, (int)sizeof(temp), stdin) != NULL && temp[0] != '\n') {
-        temp[strcspn(temp, "\n")] = 0;
+
+    printf("Digite o novo nome do usuario (aperte enter se nao quer editar o nome): ");
+    lerStr(temp, TAM_MAX_NOME);
+    if(strlen(temp) > 0){
         strcpy(u.nome, temp);
     }
+    printf("Digite o novo email do usuario (aperte enter se nao deseja editar o email): ");
+    lerStr(temp, TAM_MAX_EMAIL);
+    if(strlen(temp) > 0){
+        strcpy(u.email, temp);
+    }
+    
+    fseek(arq, -(long)sizeof(struct Usuario), SEEK_CUR); // CORRIGIDO: Adicionado cast (long)
+    fwrite(&u, sizeof(struct Usuario), 1, arq);
 
-    // att arquivo
-    arq = fopen(nomeArqUsuarios, "r+b");
-    if (arq == NULL) {
-        printf("Erro ao abrir arquivo!\n");
+    printf("Usuario atualizado com sucesso.\n");
+    fclose(arq);
+}
+
+void atualizarVideo(char nomeArqVideos[]){ // CORRIGIDO: mudado de char para char[]
+    int idVideo, buscaVideo;
+
+    printf("Digite o id do video que deseja atualizar: ");
+    scanf("%d", &idVideo);
+    getchar();
+
+    buscaVideo = buscarVideo(nomeArqVideos, idVideo);
+    if(buscaVideo == -1){
+        printf("Video nao cadastrado.\n");
         return;
     }
 
-    while (fread(&u_temp, sizeof(struct Usuario), 1, arq) == 1) {
-        if (strcmp(u_temp.email, email) == 0) {
-            fseek(arq, -(long)sizeof(struct Usuario), SEEK_CUR);
-            fwrite(&u, sizeof(struct Usuario), 1, arq);
-            printf("✓ Usuario atualizado com sucesso!\n");
-            fclose(arq);
-            return;
+    FILE * arq = fopen(nomeArqVideos, "r+b");
+
+    if(arq == NULL){
+        printf("Erro ao abrir arquivo de videos.\n");
+        return;
+    }
+
+    struct Video u;
+
+    long posicaoBytes = buscaVideo * sizeof(struct Video); // CORRIGIDO: era sizeof(struct Usuario)
+    fseek(arq, posicaoBytes, SEEK_SET);
+    fread(&u, sizeof(struct Video), 1, arq); // CORRIGIDO: era sizeof(struct Usuario)
+
+    char temp[TAM_MAX_TITULO];
+
+    printf("Digite o novo titulo (aperte enter se nao quer editar o titulo): ");
+    lerStr(temp, TAM_MAX_TITULO);
+    if(strlen(temp) > 0){
+        strcpy(u.titulo, temp);
+    }
+    printf("Digite a nova descricao (aperte enter se nao deseja editar a descricao): ");
+    lerStr(temp, TAM_MAX_DESCRICAO);
+    if(strlen(temp) > 0){
+        strcpy(u.descricao, temp);
+    }
+    printf("Digite o novo tema (aperte enter se nao deseja editar o tema): ");
+    lerStr(temp, TAM_MAX_TEMA);
+    if(strlen(temp) > 0){
+        strcpy(u.tema, temp);
+    }
+    
+    fseek(arq, -(long)sizeof(struct Video), SEEK_CUR); // CORRIGIDO: Adicionado cast (long)
+    fwrite(&u, sizeof(struct Video), 1, arq);
+
+    printf("Video atualizado com sucesso.\n");
+    fclose(arq);
+}
+
+void relatorio(char nomeArqVideos[], char nomeArqUsuarios[]){
+    FILE * arqUsuarios = fopen(nomeArqUsuarios, "rb");
+    FILE * arqVideos = fopen(nomeArqVideos, "rb");
+
+    if(arqUsuarios == NULL){
+        printf("Erro ao abrir arquivo de usuarios.\n");
+        return;
+    }
+    if(arqVideos == NULL){
+        printf("Erro ao abrir arquivo de videos.\n");
+        fclose(arqUsuarios);
+        return;
+    }
+
+    struct Usuario u;
+
+    while(fread(&u, sizeof(struct Usuario), 1, arqUsuarios) == 1){
+        printf("\nId: %d\n", u.id);
+        printf("Nome: %s\n", u.nome);
+
+        if (u.qtd_favoritos == 0) {
+            printf("\t(Nenhum video favoritado)\n");
+        } else {
+            printf("Videos favoritados: \n");
+            for(int i = 0; i < u.qtd_favoritos; i+=1){
+                int buscaVideo = buscarVideo(nomeArqVideos, u.idsVideosFavoritos[i]);
+
+                if(buscaVideo == -1){
+                    printf("id %d nao encontrado.\n", u.idsVideosFavoritos[i]);
+                    continue;
+                }
+                struct Video v;
+                long posicaoBytes = buscaVideo * sizeof(struct Video);
+                fseek(arqVideos, posicaoBytes, SEEK_SET);
+                fread(&v, sizeof(struct Video), 1, arqVideos);
+
+                printf("  - Titulo: %s\n", v.titulo);
+                printf("    Descricao: %s\n", v.descricao);
+                printf("    Tema: %s\n", v.tema);
+            }
         }
     }
+
+    fclose(arqUsuarios);
+    fclose(arqVideos);
+}
+
+void excluirUsuario(char nomeArquivoUsuarios[]){
+    int id;
+
+    printf("Digite o id do usuario que deseja excluir: ");
+    scanf("%d", &id);
+    getchar();
+
+    FILE * arqAntigo = fopen(nomeArquivoUsuarios, "rb");
+    if(arqAntigo == NULL){
+        printf("Erro ao abrir arquivo de usuarios.\n");
+        return;
+    }
+
+    FILE *arqNovo = fopen("temp.bin", "wb");
+    if (arqNovo == NULL) {
+        printf("Erro ao criar arquivo temporario.\n");
+        fclose(arqAntigo);
+        return;
+    }
+
+    struct Usuario u;
+    int encontrou = 0;
+
+    while (fread(&u, sizeof(struct Usuario), 1, arqAntigo) == 1) {
+        if (u.id == id) {
+            encontrou = 1; 
+        } else {
+            fwrite(&u, sizeof(struct Usuario), 1, arqNovo);
+        }
+    }
+
+    fclose(arqAntigo);
+    fclose(arqNovo);
+
+    if (encontrou == 1) {
+        remove(nomeArquivoUsuarios);
+        rename("temp.bin", nomeArquivoUsuarios);
+        printf("Usuario excluido com sucesso!\n");
+    } else {
+        remove("temp.bin");
+        printf("Erro: Usuario ID %d nao encontrado.\n", id);
+    }
+}
+
+void excluirVideo(char nomeArqVideos[]){
+    int id;
+
+    printf("Digite o id do video que deseja excluir: ");
+    scanf("%d", &id);
+    getchar();
+
+    FILE * arqAntigo = fopen(nomeArqVideos, "rb");
+    if(arqAntigo == NULL){
+        printf("Erro ao abrir arquivo de videos.\n");
+        return;
+    }
+
+    FILE *arqNovo = fopen("temp.bin", "wb");
+    if (arqNovo == NULL) {
+        printf("Erro ao criar arquivo temporario.\n");
+        fclose(arqAntigo);
+        return;
+    }
+
+    struct Video u;
+    int encontrou = 0;
+
+    while (fread(&u, sizeof(struct Video), 1, arqAntigo) == 1) {
+        if (u.id == id) {
+            encontrou = 1; 
+        } else {
+            fwrite(&u, sizeof(struct Video), 1, arqNovo);
+        }
+    }
+
+    fclose(arqAntigo);
+    fclose(arqNovo);
+
+    if (encontrou == 1) {
+        remove(nomeArqVideos);
+        rename("temp.bin", nomeArqVideos);
+        printf("Video excluido com sucesso!\n");
+    } else {
+        remove("temp.bin");
+        printf("Erro: Video ID %d nao encontrado.\n", id);
+    }
+}
+
+void verUmVideo(char nomeArqVideos[]){
+    int id, buscaVideo;
+
+    printf("Digite o id do video que deseja ver: ");
+    scanf("%d", &id);
+
+    buscaVideo = buscarVideo(nomeArqVideos, id);
+
+    if(buscaVideo == -1){
+        printf("Video nao encontrado.\n");
+        return;
+    }
+
+    FILE * arq = fopen(nomeArqVideos, "rb");
+
+    if(arq == NULL){
+        printf("Erro na abertura do arquivo de videos.\n");
+        return;
+    }
+
+    struct Video v;
+    long posicaoBytes = sizeof(struct Video) * buscaVideo;
+    fseek(arq, posicaoBytes, SEEK_SET);
+    fread(&v, sizeof(struct Video), 1, arq);
+
+    printf("\nID: %d", v.id);
+    printf("\nTitulo: %s", v.titulo);
+    printf("\nDescricao: %s", v.descricao);
+    printf("\nTema: %s\n", v.tema);
 
     fclose(arq);
 }
 
-void deletarUsuario() {
-    char email[TAM_MAX_EMAIL];
+void verUmUsuario(char nomeArqUsuarios[], char nomeArqVideos[]){
+    int id, buscaUsuario;
 
-    printf("\n--- DELETAR USUARIO ---\n");
-    printf("Email do usuario a deletar: ");
-    limparBuffer();
-    fgets(email, (int)sizeof(email), stdin);
-    email[strcspn(email, "\n")] = 0;
+    printf("Digite o id do usuario que deseja ver: ");
+    scanf("%d", &id);
 
-    FILE *arqOriginal = fopen(nomeArqUsuarios, "rb");
-    FILE *arqTemp = fopen("temp_usuarios.bin", "wb");
+    buscaUsuario = buscarUsuarioId(nomeArqUsuarios, id);
 
-    if (arqOriginal == NULL || arqTemp == NULL) {
-        printf("Erro ao abrir arquivos!\n");
+    if(buscaUsuario == -1){
+        printf("Usuario nao encontrado.\n");
+        return;
+    }
+
+    FILE * arq = fopen(nomeArqUsuarios, "rb");
+    if(arq == NULL){
+        printf("Erro ao abrir arquivo de usuarios.\n");
         return;
     }
 
     struct Usuario u;
-    int encontrado = 0;
+    long posicaoBytes = sizeof(struct Usuario) * buscaUsuario;
+    fseek(arq, posicaoBytes, SEEK_SET);
+    fread(&u, sizeof(struct Usuario), 1, arq);
 
-    while (fread(&u, sizeof(struct Usuario), 1, arqOriginal) == 1) {
-        if (strcmp(u.email, email) != 0) {
-            fwrite(&u, sizeof(struct Usuario), 1, arqTemp);
-        } else {
-            encontrado = 1;
-        }
-    }
-
-    fclose(arqOriginal);
-    fclose(arqTemp);
-
-    if (encontrado) {
-        remove(nomeArqUsuarios);
-        rename("temp_usuarios.bin", nomeArqUsuarios);
-        printf("Usuario deletado com sucesso!\n");
-    } else {
-        remove("temp_usuarios.bin");
-        printf("Usuario não encontrado!\n");
-    }
-}
-
-// funçoes 
-
-void relatorioUsuariosComFavoritos() {
-    FILE *arqUsuarios = fopen(nomeArqUsuarios, "rb");
-
-    if (arqUsuarios == NULL) {
-        printf("\nNenhum usuario cadastrado!\n");
+    printf("\nID: %d", u.id);
+    printf("\nNome: %s", u.nome);
+    printf("\nEmail: %s", u.email);
+    printf("\nVideos favoritos: \n");
+    if (u.qtd_favoritos == 0) {
+        printf("\t(Nenhum video favoritado)\n");
+        fclose(arq);
         return;
     }
+        
+    FILE *arqVideos = fopen(nomeArqVideos, "rb");
+    if(arqVideos != NULL) {
+        for(int i = 0; i < u.qtd_favoritos; i+=1){
+            int buscaVideo = buscarVideo(nomeArqVideos, u.idsVideosFavoritos[i]);
 
-    printf("\n");
-    printf("-------------------------------------------------------------------\n");
-    printf("||          RELATORIO: USUARIOS E SEUS VIDEOS FAVORITOS           ||\n");
-    printf("-------------------------------------------------------------------\n");
-
-    struct Usuario u;
-    int totalUsuarios = 0;
-
-    while (fread(&u, sizeof(struct Usuario), 1, arqUsuarios) == 1) {
-        printf("\n----------------------------------------------------------------\n");
-        printf("| USUARIO: %s\n", u.nome);
-        printf("| Email: %s\n", u.email);
-        printf("| ID: %d\n", u.id);
-        printf("|----------------------------------------------------------------------|\n");
-
-        if (u.qtdVideosFavoritos == 0) {
-            printf("│ Nenhum video nos favoritos\n");
-        } else {
-            printf("│ Videos Favoritos:\n");
-            for (int i = 0; i < u.qtdVideosFavoritos; i++) {
-                struct Video v;
-                buscarVideoPorId(u.idsVideosFavoritos[i], &v);
-                printf("│   %d. %s\n", i + 1, v.titulo);
-                printf("│      Tema: %s\n", v.tema);
-                printf("│      Descrição: %s\n", v.descricao);
+            if(buscaVideo == -1){
+                printf("id %d nao encontrado.\n", u.idsVideosFavoritos[i]);
+                continue;
             }
+            
+            struct Video v;
+            long posicaoBytesVideo = buscaVideo * sizeof(struct Video);
+            fseek(arqVideos, posicaoBytesVideo, SEEK_SET);
+            fread(&v, sizeof(struct Video), 1, arqVideos);
+
+            printf("  Titulo: %s\n", v.titulo);
+            printf("  Descricao: %s\n", v.descricao);
+            printf("  Tema: %s\n", v.tema);
         }
-        printf("---------------------------------------------------------\n");
-        totalUsuarios++;
+        fclose(arqVideos);
     }
-
-    printf("\nTotal de usuarios: %d\n", totalUsuarios);
-    fclose(arqUsuarios);
-}
-
-// ============= FUNÇÃO PRINCIPAL =============
-
-int main() {
-    int opcao;
-
-    while (1) {
-        printf("\n");
-        printf("------------------------------------------------------------------\n");
-        printf("|                  STREAMING DE VIDEOS - MENU PRINCIPAL           |\n");
-        printf("-------------------------------------------------------------------\n");
-        printf("\n[1] Cadastrar novo usuario");
-        printf("\n[2] Cadastrar novo video");
-        printf("\n[3] Listar todos os videos");
-        printf("\n[4] Listar todos os usuarios");
-        printf("\n[5] Adicionar video aos favoritos");
-        printf("\n[6] Atualizar usuario");
-        printf("\n[7] Atualizar video");
-        printf("\n[8] Deletar usuario");
-        printf("\n[9] Deletar video");
-        printf("\n[10] Relatorio: Usuarios com Favoritos");
-        printf("\n[0] Sair\n");
-        printf("\nEscolha uma opcao: ");
-        scanf("%d", &opcao);
-
-        switch (opcao) {
-            case 1:
-                cadastrarUsuario();
-                break;
-            case 2:
-                cadastrarVideo();
-                break;
-            case 3:
-                listarTodosVideos();
-                break;
-            case 4:
-                listarTodosUsuarios();
-                break;
-            case 5:
-                adicionarVideoFavorito();
-                break;
-            case 6:
-                atualizarUsuario();
-                break;
-            case 7:
-                atualizarVideo();
-                break;
-            case 8:
-                deletarUsuario();
-                break;
-            case 9:
-                deletarVideo();
-                break;
-            case 10:
-                relatorioUsuariosComFavoritos();
-                break;
-            case 0:
-                printf("\nObrigado por usar o sistema!\n");
-                return 0;
-            default:
-                printf("\nOpcao invalida!\n");
-        }
-    }
-
-    return 0;
+    fclose(arq);
 }
